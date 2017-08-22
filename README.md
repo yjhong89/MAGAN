@@ -1,4 +1,5 @@
-# Margin-Adaptation-GAN
-Implementation of Margin Adaptation GAN
+# MAGAN
+Margin Adaptation GAN
 
-https://arxiv.org/abs/1704.03817
+Reference : 
+1) MAGAN(https://arxiv.org/abs/1704.03817)
