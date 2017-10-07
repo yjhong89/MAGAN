@@ -83,7 +83,7 @@ def image_list(image_dir):
         '''
         shuffle : Boolean. If true, the strings are randomly shuffled within each epoch
         capacity : An integer, Sets the queue capacity maximum
-        num_epoch : If not specified string_input_producer can cycle through the strings in inp
+        num_epoch : If not specified string_input_producer can cycle through the strings in input
         FIFOQUEUE + QUEUERUNNER'''
         file_list_queue = tf.train.string_input_producer(file_list, capacity=1000, shuffle=True) # Need to change 'queue'  from ''list'
         return file_list_queue
@@ -92,10 +92,10 @@ def read_files_preprocess(file_list_queue, args):
     image_reader = tf.WholeFileReader()
     key, value = image_reader.read(file_list_queue) # Returns both string scalar tensor
     uint8_image = tf.image.decode_jpeg(value, channels=args.num_channels) # Returns of type uint8 with [height, width, channels], # tf.image.decode_image not working
-#    image_spec = uint8_image.get_shape().as_list() -> height, width is unknown
-#    print(image_expanded_4d.get_shape()) # [1,?,?,args.num_channels]
- #   offset_height = (image_spec[0] - args.input_size) // 2
- #   offset_width = (image_spec[1] - args.input_size) // 2
+	#image_spec = uint8_image.get_shape().as_list() -> height, width is unknown
+	#print(image_expanded_4d.get_shape()) # [1,?,?,args.num_channels]
+ 	#offset_height = (image_spec[0] - args.input_size) // 2
+ 	#offset_width = (image_spec[1] - args.input_size) // 2
     cropped_image = tf.cast(tf.image.crop_to_bounding_box(uint8_image, offset_height=50, offset_width=35, target_height=args.input_size ,target_width=args.input_size), tf.float32)
     image_expanded_4d = tf.expand_dims(cropped_image, 0) # Make 4 dimensional considering batch dimension, make it available as input
     resized_image = tf.image.resize_bilinear(image_expanded_4d, size=[args.target_size, args.target_size])
@@ -106,17 +106,20 @@ def read_input(file_list_queue, args):
     inp_img = read_files_preprocess(file_list_queue, args)
     num_preprocess_threads = 4
     min_queue_examples = int(0.1*args.num_examples_per_epoch)
-    print('Shuffling inputs %s' %(inp_img.get_shape()))
     '''    
-    This function adds : 1. A shuffling queue into which tensors form tensor list are enqueued. 2. A dequeue_may operation to craete batches from the queue, 3. A QueueRunner to enqueue the tensors form tensor list
-    shuffle_batch constructs a RandomShuffleQueue and proceeds to fill with a QueueRunner. The queue accumulates examples sequentialy until in contains bach_size + min_after_dequeue examples are present.
-    It then selects batch_size random element from the queue to return The value actually returned by shffle_batch is the result of a dequeue_may call on the RandomShuffleQueue
-    enqueue_many argument set as False -> input shape will be [x,y,z], output will be [batch, x,y,z]
-    Reference from http://stackoverflow.com/questions/36334371/tensorflow-batching-input-queues-then-changing-the-queue-source'''
+    	This function adds:
+			1. A shuffling queue into which tensors from tensor list are enqueued. 
+			2. A dequeue_many operation to create batches from the queue. 
+			3. A QueueRunner to enqueue the tensors form tensor list
+		shuffle_batch constructs a RandomShuffleQueue and proceeds to fill with a QueueRunner. 
+		The queue accumulates examples sequentialy until in contains bach_size + min_after_dequeue examples are present.
+		It then selects batch_size random element from the queue to return The value actually returned by shffle_batch is the result of a dequeue_may call on the RandomShuffleQueue
+    	enqueue_many argument set as False -> input shape will be [x,y,z], output will be [batch, x,y,z]
+    
+		Reference from http://stackoverflow.com/questions/36334371/tensorflow-batching-input-queues-then-changing-the-queue-source'''
     #  tensors part should be iterable so [] needed(tensor list)
     input_image = tf.train.shuffle_batch([inp_img], batch_size=args.batch_size, num_threads=num_preprocess_threads, capacity=min_queue_examples+3*args.batch_size,  min_after_dequeue=min_queue_examples)
     input_image = input_image / 127.5  - 1
-    print(input_image.get_shape())
     return input_image
 
 def save_image(imgs, size, path):
